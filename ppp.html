@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+
+    #game-board {
+        display: grid;
+        grid-template-columns: repeat(3, 100px);
+        grid-template-rows: repeat(3, 100px);
+        gap: 2px;
+    }
+
+    .cell {
+        background-color: #eee;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 36px;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .cell:hover {
+        background-color: #ddd;
+    }
+
+    .fireworks {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: 9999;
+        background: transparent;
+        pointer-events: none;
+    }
+
+    @keyframes explode {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(10);
+            opacity: 0;
+        }
+    }
+
+    .firework {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #ff0;
+        animation: explode 0.5s ease-out;
+    }
+
+    .popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .popup-content {
+        background: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: center;
+    }
+
+    .line {
+        position: absolute;
+        z-index: 1;
+        pointer-events: none;
+        font-size: 72px;
+    }
+</style>
+</head>
+<body>
+<div id="game-board"></div>
+<div class="fireworks"></div>
+<div class="popup" id="popup">
+    <div class="popup-content">
+        <p id="victoryMessage">Game Over!</p>
+        <p>Do you want to restart?</p>
+        <button id="restartBtn">Restart</button>
+    </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const board = document.getElementById("game-board");
+        const fireworks = document.querySelector(".fireworks");
+        const popup = document.getElementById("popup");
+        const victoryMessage = document.getElementById("victoryMessage");
+        const restartBtn = document.getElementById("restartBtn");
+        let currentPlayer = "X";
+        let playerName = prompt("Enter your name:");
+        let gameEnded = false;
+        const cells = [];
+        let winningCells = [];
+
+        function createBoard() {
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const cell = document.createElement("div");
+                    cell.classList.add("cell");
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener("click", handleCellClick);
+                    board.appendChild(cell);
+                    cells.push(cell);
+                }
+            }
+        }
+
+        function handleCellClick(event) {
+            if (gameEnded) return;
+            const cell = event.target;
+            if (!cell.textContent) {
+                cell.textContent = currentPlayer;
+                if (checkWinner()) {
+                    celebrateWin();
+                    gameEnded = true;
+                    showPopup();
+                } else if (checkDraw()) {
+                    showPopup();
+                } else {
+                    currentPlayer = currentPlayer === "X" ? "O" : "X";
+                }
+            }
+        }
+
+        function checkWinner() {
+            const winningCombinations = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0, 4, 8],
+                [2, 4, 6]
+            ];
+            return winningCombinations.some(combination => {
+                const [a, b, c] = combination;
+                if (cells[a].textContent && cells[a].textContent === cells[b].textContent && cells[a].textContent === cells[c].textContent) {
+                    winningCells = [cells[a], cells[b], cells[c]];
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        function checkDraw() {
+            return cells.every(cell => cell.textContent);
+        }
+
+        function celebrateWin() {
+            const x1 = winningCells[0].offsetLeft + winningCells[0].offsetWidth / 2;
+            const y1 = winningCells[0].offsetTop + winningCells[0].offsetHeight / 2;
+            const x2 = winningCells[2].offsetLeft + winningCells[2].offsetWidth / 2;
+            const y2 = winningCells[2].offsetTop + winningCells[2].offsetHeight / 2;
+
+            const line = document.createElement("div");
+            line.classList.add("line");
+            line.style.left = x1 + "px";
+            line.style.top = y1 + "px";
+            line.style.transform = `rotate(${Math.atan2(y2 - y1, x2 - x1)}rad)`;
+            line.textContent = winningCells[0].textContent;
+            board.appendChild(line);
+
+            setTimeout(() => {
+                line.style.opacity = "0";
+            }, 1000);
+
+            setTimeout(() => {
+                fireworks.appendChild(line);
+                fireworks.removeChild(line);
+            }, 2000);
+        }
+
+        function showPopup() {
+            victoryMessage.textContent = `Hurry! ${playerName}, you won this game!`;
+            popup.style.display = "flex";
+        }
+
+        restartBtn.addEventListener("click", () => {
+            cells.forEach(cell => {
+                cell.textContent = "";
+            });
+            currentPlayer = "X";
+            gameEnded = false;
+            popup.style.display = "none";
+            winningCells = [];
+            const lines = document.querySelectorAll(".line");
+            lines.forEach(line => board.removeChild(line));
+        });
+
+        createBoard();
+    });
+</script>
+</body>
+</html>
